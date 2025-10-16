@@ -16,3 +16,8 @@ export interface Agent {
   input: string | null;
   output: string | null;
 }
+
+export interface ClarificationRequest {
+  ask: AgentName;
+  question: string;
+}

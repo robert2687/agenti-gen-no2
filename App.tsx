@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Agent, AgentStatus } from './types';
 import { INITIAL_AGENTS } from './constants';
@@ -24,7 +25,9 @@ const App: React.FC = () => {
   useEffect(() => {
     if (coderAgent && coderAgent.output) {
       const codeMatch = coderAgent.output.match(/```html\n([\s\S]*?)```/);
-      setPreviewCode(codeMatch ? codeMatch[1] : coderAgent.output);
+      setPreviewCode(codeMatch ? codeMatch[1] : null); // Only show preview if there is a code block
+    } else {
+      setPreviewCode(null);
     }
   }, [coderAgent, coderAgent?.output]);
 
@@ -57,17 +60,22 @@ const App: React.FC = () => {
     setIsGenerating(true);
 
     let currentInput = `The user wants to build an application with the following goal: "${projectGoal}".`;
-    const newAgentsState = [...INITIAL_AGENTS];
+    const agentStates: Agent[] = [...INITIAL_AGENTS];
     
-    for (let i = 0; i < newAgentsState.length; i++) {
+    for (let i = 0; i < agentStates.length; i++) {
         setCurrentAgentIndex(i);
         setSelectedAgentIndex(i);
         
-        const currentAgent = { ...newAgentsState[i], status: AgentStatus.RUNNING, input: currentInput, output: '' };
-        newAgentsState[i] = currentAgent;
-        setAgents([...newAgentsState]);
+        let agentInputForRun = currentInput;
+        let finalAgentOutput = '';
+        let needsClarificationLoop = true;
+        
+        agentStates[i] = { ...agentStates[i], status: AgentStatus.RUNNING, input: agentInputForRun, output: '' };
+        setAgents([...agentStates]);
 
-        try {
+        while (needsClarificationLoop) {
+            needsClarificationLoop = false; // Will be set to true only if a clarification is asked
+
             const onChunk = (chunk: string) => {
                 setAgents(prevAgents => {
                     const updatedAgents = [...prevAgents];
@@ -79,22 +87,57 @@ const App: React.FC = () => {
                 });
             };
 
-            const finalOutput = await geminiService.runAgentStream(currentAgent, currentInput, onChunk);
-            
-            newAgentsState[i] = { ...newAgentsState[i], status: AgentStatus.COMPLETED, output: finalOutput };
-            currentInput = `As the ${newAgentsState[i].name}, you produced this output:\n\n${finalOutput}`;
-        
-        } catch (e) {
-            const errorMessage = e instanceof Error ? e.message : 'An unknown error occurred';
-            newAgentsState[i] = { ...newAgentsState[i], status: AgentStatus.ERROR, output: errorMessage };
-            setError(`Error at ${newAgentsState[i].name} agent: ${errorMessage}`);
-            setAgents([...newAgentsState]);
-            setIsGenerating(false);
-            return;
+            const streamedOutput = await geminiService.runAgentStream(agentStates[i], agentInputForRun, onChunk);
+
+            if (agentStates[i].name === 'Coder') {
+                const request = geminiService.isClarificationRequest(streamedOutput);
+                if (request && request.ask === 'Architect') {
+                    needsClarificationLoop = true;
+                    
+                    const questionLog = `\n\n---\n\n**Question to Architect:**\n> ${request.question}\n`;
+                    const currentCoderOutput = agentStates[i].output || '';
+                    agentStates[i] = { ...agentStates[i], output: currentCoderOutput.replace(streamedOutput, '') + questionLog };
+                    setAgents([...agentStates]);
+
+                    const architect = agentStates.find(a => a.name === 'Architect');
+                    if (!architect || !architect.output) {
+                        throw new Error("Architect agent or its output not found for clarification.");
+                    }
+
+                    const onAnswerChunk = (chunk: string) => {
+                        setAgents(prev => {
+                            const updated = [...prev];
+                            if(updated[i]) {
+                                updated[i].output = (updated[i].output || '') + chunk;
+                            }
+                            return updated;
+                        });
+                    };
+                    
+                    onAnswerChunk('\n**Architect\'s Answer:**\n> ');
+                    const answer = await geminiService.getClarificationAnswerStream(architect, request.question, architect.output, onAnswerChunk);
+                    onAnswerChunk('\n\n---\n');
+
+                    const conversationHistory = `${questionLog}\n**Architect's Answer:**\n> ${answer}\n\n---\n`;
+                    agentInputForRun = `${currentInput}\n\n**Clarification was needed. Here is the conversation:**${conversationHistory}\n**Now, with this new information, generate the final HTML code.**`;
+                    
+                    // Keep the conversation log in the output for the next run
+                    agentStates[i] = { ...agentStates[i], output: agentStates[i].output || '' }; // Persist the log
+                    setAgents([...agentStates]);
+
+                } else {
+                    finalAgentOutput = streamedOutput;
+                }
+            } else {
+                finalAgentOutput = streamedOutput;
+            }
         }
+        
+        agentStates[i] = { ...agentStates[i], status: AgentStatus.COMPLETED, output: finalAgentOutput };
+        currentInput = `As the ${agentStates[i].name}, you produced this output:\n\n${finalAgentOutput}`;
+        setAgents([...agentStates]);
     }
     
-    setAgents(newAgentsState);
     setIsGenerating(false);
     setCurrentAgentIndex(-1);
   }, [projectGoal]);
