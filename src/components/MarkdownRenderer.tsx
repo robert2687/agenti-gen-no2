@@ -6,7 +6,14 @@ const renderParagraphContent = (text: string) => {
   const parts = text.split(/(`[^`]+`|\*\*[^*]+\*\*)/g);
   return parts.map((part, i) => {
     if (part.startsWith('`') && part.endsWith('`')) {
-      return <code key={i} className="bg-slate-700 text-rose-400 rounded px-1.5 py-1 text-sm font-semibold">{part.slice(1, -1)}</code>;
+      return (
+        <code
+          key={i}
+          className="bg-slate-700 text-rose-400 rounded px-1.5 py-1 text-sm font-semibold"
+        >
+          {part.slice(1, -1)}
+        </code>
+      );
     }
     if (part.startsWith('**') && part.endsWith('**')) {
       return <strong key={i}>{part.slice(2, -2)}</strong>;
@@ -15,50 +22,76 @@ const renderParagraphContent = (text: string) => {
   });
 };
 
-
 const NonCodeRenderer = ({ content }: { content: string }) => {
   if (!content.trim()) return null;
 
   const paragraphs = content.split(/\n\s*\n/); // Split by one or more empty lines
-  
+
   return (
     <>
       {paragraphs.map((para, i) => {
         const trimmedPara = para.trim();
         if (!trimmedPara) return null;
-        
+
         // Headings
-        if (trimmedPara.startsWith('# ')) return <h1 key={i} className="text-2xl font-bold mt-6 mb-3 text-slate-100 border-b border-slate-700 pb-2">{renderParagraphContent(trimmedPara.substring(2))}</h1>;
-        if (trimmedPara.startsWith('## ')) return <h2 key={i} className="text-xl font-bold mt-5 mb-2 text-slate-100 border-b border-slate-700 pb-1">{renderParagraphContent(trimmedPara.substring(3))}</h2>;
-        if (trimmedPara.startsWith('### ')) return <h3 key={i} className="text-lg font-semibold mt-4 mb-2 text-slate-200">{renderParagraphContent(trimmedPara.substring(4))}</h3>;
+        if (trimmedPara.startsWith('# '))
+          return (
+            <h1
+              key={i}
+              className="text-2xl font-bold mt-6 mb-3 text-slate-100 border-b border-slate-700 pb-2"
+            >
+              {renderParagraphContent(trimmedPara.substring(2))}
+            </h1>
+          );
+        if (trimmedPara.startsWith('## '))
+          return (
+            <h2
+              key={i}
+              className="text-xl font-bold mt-5 mb-2 text-slate-100 border-b border-slate-700 pb-1"
+            >
+              {renderParagraphContent(trimmedPara.substring(3))}
+            </h2>
+          );
+        if (trimmedPara.startsWith('### '))
+          return (
+            <h3 key={i} className="text-lg font-semibold mt-4 mb-2 text-slate-200">
+              {renderParagraphContent(trimmedPara.substring(4))}
+            </h3>
+          );
 
         // Lists (each line is a list item)
         if (trimmedPara.startsWith('* ') || trimmedPara.startsWith('- ')) {
           const items = trimmedPara.split('\n').map(item => item.substring(item.search(/\S/) + 2));
           return (
             <ul key={i} className="list-disc list-outside space-y-2 my-4 pl-6">
-              {items.map((item, j) => <li key={j}>{renderParagraphContent(item)}</li>)}
+              {items.map((item, j) => (
+                <li key={j}>{renderParagraphContent(item)}</li>
+              ))}
             </ul>
           );
         }
-        
-         if (/^\d+\.\s/.test(trimmedPara)) {
+
+        if (/^\d+\.\s/.test(trimmedPara)) {
           const items = trimmedPara.split('\n').map(item => item.replace(/^\d+\.\s/, ''));
           return (
             <ol key={i} className="list-decimal list-outside space-y-2 my-4 pl-6">
-              {items.map((item, j) => <li key={j}>{renderParagraphContent(item)}</li>)}
+              {items.map((item, j) => (
+                <li key={j}>{renderParagraphContent(item)}</li>
+              ))}
             </ol>
           );
         }
 
         // Default to paragraph
-        return <p key={i} className="my-4 leading-relaxed">{renderParagraphContent(trimmedPara)}</p>;
-
+        return (
+          <p key={i} className="my-4 leading-relaxed">
+            {renderParagraphContent(trimmedPara)}
+          </p>
+        );
       })}
     </>
   );
 };
-
 
 const CodeBlock: React.FC<{ code: string; language: string | null }> = ({ code, language }) => {
   const [isCopied, setIsCopied] = useState(false);
@@ -99,7 +132,6 @@ const CodeBlock: React.FC<{ code: string; language: string | null }> = ({ code, 
   );
 };
 
-
 const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
   // Split content by code blocks, keeping the delimiters.
   const parts = content.split(/(```(?:[\s\S]*?)```)/g);
@@ -112,12 +144,12 @@ const MarkdownRenderer: React.FC<{ content: string }> = ({ content }) => {
         if (part.startsWith('```') && part.endsWith('```')) {
           const codeMatch = part.match(/```(\w*)\n?([\s\S]*?)```/);
           if (codeMatch) {
-              const language = codeMatch[1] || null;
-              const code = codeMatch[2] || '';
-              return <CodeBlock key={index} code={code.trim()} language={language} />;
+            const language = codeMatch[1] || null;
+            const code = codeMatch[2] || '';
+            return <CodeBlock key={index} code={code.trim()} language={language} />;
           }
-           const code = part.slice(3, -3);
-           return <CodeBlock key={index} code={code.trim()} language={null} />;
+          const code = part.slice(3, -3);
+          return <CodeBlock key={index} code={code.trim()} language={null} />;
         } else {
           return <NonCodeRenderer key={index} content={part} />;
         }

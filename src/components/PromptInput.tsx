@@ -11,8 +11,15 @@ interface PromptInputProps {
   isComplete: boolean;
 }
 
-const PromptInput: React.FC<PromptInputProps> = ({ projectGoal, setProjectGoal, onStart, onReset, onPreview, isGenerating, isComplete }) => {
-  
+const PromptInput: React.FC<PromptInputProps> = ({
+  projectGoal,
+  setProjectGoal,
+  onStart,
+  onReset,
+  onPreview,
+  isGenerating,
+  isComplete,
+}) => {
   const handlePrimaryAction = () => {
     if (isComplete) {
       onPreview();
@@ -21,12 +28,12 @@ const PromptInput: React.FC<PromptInputProps> = ({ projectGoal, setProjectGoal, 
     }
   };
 
-  const primaryButtonText = isGenerating 
-    ? 'Generating...' 
-    : isComplete 
-    ? 'Preview Application' 
-    : 'Start Generation';
-  
+  const primaryButtonText = isGenerating
+    ? 'Generating...'
+    : isComplete
+      ? 'Preview Application'
+      : 'Start Generation';
+
   return (
     <div className="bg-slate-800/50 rounded-lg p-4 flex flex-col gap-4">
       <label htmlFor="project-goal" className="font-bold text-sky-400">
@@ -35,7 +42,7 @@ const PromptInput: React.FC<PromptInputProps> = ({ projectGoal, setProjectGoal, 
       <textarea
         id="project-goal"
         value={projectGoal}
-        onChange={(e) => setProjectGoal(e.target.value)}
+        onChange={e => setProjectGoal(e.target.value)}
         placeholder="e.g., A web app for tracking personal fitness goals with data visualization..."
         className="w-full h-32 p-2 bg-slate-700/50 rounded-md border border-slate-600 focus:ring-2 focus:ring-sky-500 focus:outline-none resize-none transition-colors"
         disabled={isGenerating}

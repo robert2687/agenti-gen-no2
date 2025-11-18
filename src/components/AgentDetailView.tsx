@@ -17,7 +17,7 @@ const AgentDetailView: React.FC<AgentDetailViewProps> = ({ agent }) => {
       scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
     }
   }, [agent.output, agent.status]);
-  
+
   const renderOutputContent = () => {
     switch (agent.status) {
       case AgentStatus.RUNNING:
@@ -27,13 +27,20 @@ const AgentDetailView: React.FC<AgentDetailViewProps> = ({ agent }) => {
         return (
           <>
             <MarkdownRenderer content={agent.output} />
-            <div className="inline-block animate-pulse bg-sky-400 w-2 h-5 ml-1" aria-label="Generating more content" />
+            <div
+              className="inline-block animate-pulse bg-sky-400 w-2 h-5 ml-1"
+              aria-label="Generating more content"
+            />
           </>
         );
 
       case AgentStatus.COMPLETED:
         if (!agent.output) {
-          return <p className="text-slate-500">Agent completed its task without generating any output.</p>;
+          return (
+            <p className="text-slate-500">
+              Agent completed its task without generating any output.
+            </p>
+          );
         }
         return <MarkdownRenderer content={agent.output} />;
 
@@ -44,7 +51,7 @@ const AgentDetailView: React.FC<AgentDetailViewProps> = ({ agent }) => {
             {agent.output}
           </div>
         );
-      
+
       default:
         return null;
     }
@@ -56,8 +63,11 @@ const AgentDetailView: React.FC<AgentDetailViewProps> = ({ agent }) => {
         <h2 className="text-xl font-bold text-sky-400">{agent.name} Agent</h2>
         <p className="text-sm text-slate-400">{agent.role}</p>
       </div>
-      
-      <div ref={scrollContainerRef} className="flex-grow p-4 overflow-y-auto bg-slate-900 rounded-b-lg">
+
+      <div
+        ref={scrollContainerRef}
+        className="flex-grow p-4 overflow-y-auto bg-slate-900 rounded-b-lg"
+      >
         {agent.status === AgentStatus.PENDING && (
           <div className="flex items-center justify-center h-full">
             <p className="text-slate-500">Waiting for the workflow to start...</p>
